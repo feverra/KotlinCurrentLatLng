@@ -7,14 +7,17 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.concurrent.fixedRateTimer
 
 
 class MainActivity : AppCompatActivity() {
@@ -25,6 +28,9 @@ class MainActivity : AppCompatActivity() {
     private var mLongitudeLabel: String? = null
     private var mLatitudeText: TextView? = null
     private var mLongitudeText: TextView? = null
+    private lateinit var locationCallback: LocationCallback
+    private var mLocationRequest: LocationRequest? = null
+    private var mLocationCallback: LocationCallback? = null
 
     public override fun onStart() {
         super.onStart()
@@ -35,6 +41,10 @@ class MainActivity : AppCompatActivity() {
             requestPermissions()
         } else {
             getLastLocation()
+//            fixedRateTimer("timer", false, 0L, 5 * 1000) {
+//                getLastLocation()
+//                Log.i("MyActivity", "Date : " + SimpleDateFormat("dd MMM - HH:mm", Locale.US).format(Date()))
+//            }
         }
         Log.i("MyActivity", "abc2")
     }
@@ -45,6 +55,7 @@ class MainActivity : AppCompatActivity() {
         return permissionState == PackageManager.PERMISSION_GRANTED
     }
 
+    @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -56,6 +67,35 @@ class MainActivity : AppCompatActivity() {
         mLongitudeText = findViewById<View>(R.id.longitude_text) as TextView
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                super.onLocationResult(locationResult)
+                    Log.i("MyActivity", "location1111")
+//                locationResult ?: return
+//                for (location in locationResult.locations){
+//                    Log.i("MyActivity", "location1111")
+//                }
+            }
+        }
+        mLocationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                super.onLocationResult(locationResult)
+                mLastLocation = locationResult!!.lastLocation
+                Log.i("MyActivity", "location3333 : " + mLastLocation)
+                mLatitudeText!!.setText(
+                        mLatitudeLabel+":   "+
+                                (mLastLocation )!!.latitude)
+                mLongitudeText!!.setText(mLongitudeLabel+":   "+
+                        (mLastLocation )!!.longitude)
+            }
+        }
+        mLocationRequest = LocationRequest()
+        mLocationRequest!!.interval = 5000
+        mLocationRequest!!.fastestInterval = 5000
+        mLocationRequest!!.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        mFusedLocationClient!!.requestLocationUpdates(mLocationRequest, mLocationCallback!!, Looper.myLooper())
+
     }
 
     @SuppressLint("MissingPermission")
@@ -64,6 +104,7 @@ class MainActivity : AppCompatActivity() {
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful && task.result != null) {
                         mLastLocation = task.result
+                        Log.d(TAG, "mLastLocation : " + mLastLocation)
 
                         mLatitudeText!!.setText(
                                 mLatitudeLabel+":   "+
